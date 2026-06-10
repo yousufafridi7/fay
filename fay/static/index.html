@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fay - AI Agent Workspace</title>
+    <!-- Import Google Fonts: Outfit (modern sans-serif) & JetBrains Mono (monospaced) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0b0f;
+            --glass-bg: rgba(13, 13, 18, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f1f1f7;
+            --text-secondary: #9ea2b6;
+            --accent-pink: #ff4785;
+            --accent-purple: #9d4edd;
+            --accent-blue: #00f0ff;
+            --accent-green: #39ff14;
+            --glow-pink: 0 0 15px rgba(255, 71, 133, 0.4);
+            --glow-purple: 0 0 15px rgba(157, 78, 221, 0.4);
+            --glow-blue: 0 0 15px rgba(0, 240, 255, 0.4);
+            --glow-green: 0 0 15px rgba(57, 255, 20, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        /* Fullscreen Background & Canvas Setup */
+        #bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/bg.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 1;
+            filter: brightness(0.4) contrast(1.1);
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* App Layout (Glassmorphism Frame) */
+        #app-container {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            width: 92vw;
+            height: 90vh;
+            margin: 5vh auto;
+            border-radius: 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+        }
+
+        /* Left Sidebar Styling */
+        #sidebar {
+            width: 280px;
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            background: rgba(8, 8, 12, 0.35);
+        }
+
+        /* Funky Logo Header */
+        .sidebar-header {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-svg {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(var(--glow-pink));
+            animation: pulse 2.5s infinite alternate;
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 8px rgba(255, 71, 133, 0.3));
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255, 71, 133, 0.4)); }
+            100% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.7)); }
+        }
+
+        /* Navigation Channels */
+        .channels-list {
+            padding: 20px 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .channel-item:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .channel-item.active {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+            border-left: 3px solid var(--accent-pink);
+            box-shadow: inset 5px 0 15px rgba(255, 71, 133, 0.1);
+        }
+
+        .channel-item::before {
+            content: '#';
+            font-size: 18px;
+            opacity: 0.5;
+        }
+
+        /* Status & Autopilot Panel */
+        .sidebar-bottom {
+            padding: 20px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-green);
+            box-shadow: var(--glow-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Agent Status Box */
+        .agent-status-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.active {
+            background-color: var(--accent-green);
+            box-shadow: var(--glow-green);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        /* Right Chat Panel Styling */
+        #chat-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(11, 11, 15, 0.2);
+        }
+
+        /* Chat Header */
+        .chat-header {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* Message Logs Container */
+        .messages-container {
+            flex-grow: 1;
+            padding: 24px 28px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        /* Chat Message Styling */
+        .message-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .message-row.self {
+            align-self: flex-end;
+        }
+
+        .message-meta {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .message-bubble {
+            padding: 14px 18px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 15px;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            word-wrap: break-word;
+        }
+
+        /* Custom Bubble Styles for Agents */
+        .message-row.self .message-bubble {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: rgba(0, 240, 255, 0.25);
+            color: var(--text-primary);
+            box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.05);
+            border-top-right-radius: 4px;
+        }
+
+        .message-row.aoi .message-bubble {
+            background: rgba(255, 71, 133, 0.08);
+            border-color: rgba(255, 71, 133, 0.15);
+            border-top-left-radius: 4px;
+        }
+
+        .message-row.ren .message-bubble {
+            background: rgba(157, 78, 221, 0.08);
+            border-color: rgba(157, 78, 221, 0.15);
+            border-top-left-radius: 4px;
+        }
+
+        .message-row.saya .message-bubble {
+            background: rgba(255, 215, 0, 0.06);
+            border-color: rgba(255, 215, 0, 0.15);
+            border-top-left-radius: 4px;
+        }
+
+        .message-row.kaito .message-bubble {
+            background: rgba(0, 240, 255, 0.06);
+            border-color: rgba(0, 240, 255, 0.15);
+            border-top-left-radius: 4px;
+        }
+
+        .message-row.system .message-bubble {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(255, 255, 255, 0.05);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13.5px;
+            border-radius: 8px;
+        }
+
+        /* Markdown/Pre Code blocks */
+        pre {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+
+        /* Dynamic badges for Code Reviewer Verdicts */
+        .verdict-approved {
+            display: inline-block;
+            background: rgba(57, 255, 20, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            box-shadow: var(--glow-green);
+        }
+
+        .verdict-rejected {
+            display: inline-block;
+            background: rgba(255, 71, 133, 0.15);
+            color: var(--accent-pink);
+            border: 1px solid rgba(255, 71, 133, 0.3);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            box-shadow: var(--glow-pink);
+        }
+
+        /* Human-in-the-loop Approval Card */
+        .approval-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 10px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            border-left: 4px solid var(--accent-pink);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(15px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .approval-title {
+            font-weight: 800;
+            font-size: 15px;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .approval-command {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: var(--accent-blue);
+        }
+
+        .approval-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex-grow: 1;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-approve {
+            background: rgba(57, 255, 20, 0.2);
+            border: 1px solid rgba(57, 255, 20, 0.4);
+            color: var(--accent-green);
+        }
+
+        .btn-approve:hover {
+            background: var(--accent-green);
+            color: black;
+            box-shadow: var(--glow-green);
+        }
+
+        .btn-reject {
+            background: rgba(255, 71, 133, 0.2);
+            border: 1px solid rgba(255, 71, 133, 0.4);
+            color: var(--accent-pink);
+        }
+
+        .btn-reject:hover {
+            background: var(--accent-pink);
+            color: var(--text-primary);
+            box-shadow: var(--glow-pink);
+        }
+
+        /* Message Input Area */
+        .input-panel {
+            padding: 24px 28px;
+            border-top: 1px solid var(--glass-border);
+            background: rgba(8, 8, 12, 0.2);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 14px;
+            position: relative;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 14px 20px;
+            color: var(--text-primary);
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: rgba(255, 71, 133, 0.4);
+            box-shadow: 0 0 10px rgba(255, 71, 133, 0.15);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
+            color: var(--text-primary);
+            border: none;
+            border-radius: 14px;
+            width: 52px;
+            height: 52px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: var(--glow-pink);
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(255, 71, 133, 0.6);
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+            transition: transform 0.2s ease;
+        }
+
+        .send-btn:hover svg {
+            transform: translateX(2px) translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Layer -->
+    <div id="bg-image"></div>
+    <!-- HTML5 Canvas particle system layer -->
+    <canvas id="canvas"></canvas>
+
+    <!-- App Frame -->
+    <div id="app-container">
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <!-- Custom SVG funky Fay logo icon -->
+                    <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#grad1)"/>
+                        <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="url(#grad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="grad1" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#ff4785" />
+                                <stop offset="1" stop-color="#9d4edd" />
+                            </linearGradient>
+                            <linearGradient id="grad2" x1="2" y1="12" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#9d4edd" />
+                                <stop offset="1" stop-color="#00f0ff" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span class="logo-text">fay</span>
+                </div>
+            </div>
+
+            <div class="channels-list">
+                <div class="channel-item active" onclick="switchChannel('#general')" id="chan-#general">general</div>
+                <div class="channel-item" onclick="switchChannel('#dev')" id="chan-#dev">dev</div>
+                <div class="channel-item" onclick="switchChannel('#qa-testing')" id="chan-#qa-testing">qa-testing</div>
+            </div>
+
+            <div class="sidebar-bottom">
+                <div class="toggle-container">
+                    <span class="toggle-label">Autopilot Mode</span>
+                    <label class="switch">
+                        <input type="checkbox" id="autopilot-toggle" onchange="toggleAutopilot(this)" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="agent-status-box">
+                    <span class="status-dot" id="status-dot"></span>
+                    <span id="status-text">All agents idle</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div id="chat-panel">
+            <div class="chat-header">
+                <div class="chat-title" id="chat-title">#general</div>
+            </div>
+
+            <div class="messages-container" id="messages-container">
+                <!-- Messages will appear here -->
+            </div>
+
+            <div class="input-panel">
+                <div class="input-container">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Message #general..." onkeydown="if(event.key === 'Enter') sendMessage()">
+                    <button class="send-btn" onclick="sendMessage()">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let activeChannel = '#general';
+        let allMessages = [];
+        let isRainy = false;
+        let rainTimer = 0;
+
+        // Canvas Particles Setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Cherry Blossom Petals Class
+        class Petal {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * -canvas.height;
+                this.size = Math.random() * 8 + 6;
+                this.speedX = Math.random() * 2 + 1;
+                this.speedY = Math.random() * 1.5 + 1;
+                this.angle = Math.random() * 360;
+                this.spinSpeed = Math.random() * 2 - 1;
+                this.opacity = Math.random() * 0.4 + 0.4;
+            }
+
+            update() {
+                this.y += this.speedY;
+                this.x += this.speedX + Math.sin(this.y / 30) * 0.5;
+                this.angle += this.spinSpeed;
+
+                if (this.y > canvas.height || this.x > canvas.width) {
+                    this.y = -20;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle * Math.PI / 180);
+                ctx.fillStyle = `rgba(255, 133, 173, ${this.opacity})`;
+                ctx.beginPath();
+                // Draw leaf/petal shape
+                ctx.ellipse(0, 0, this.size, this.size / 2, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Raindrop Class
+        class RainDrop {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * -canvas.height;
+                this.length = Math.random() * 18 + 10;
+                this.speed = Math.random() * 8 + 12;
+                this.opacity = Math.random() * 0.15 + 0.08;
+            }
+
+            update() {
+                this.y += this.speed;
+                // Drifts slightly with wind
+                this.x += 1.5; 
+
+                if (this.y > canvas.height) {
+                    this.y = -20;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.strokeStyle = `rgba(0, 240, 255, ${this.opacity})`;
+                ctx.lineWidth = 1;
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + 1.5, this.y + this.length);
+                ctx.stroke();
+            }
+        }
+
+        const petalsList = [];
+        const raindropsList = [];
+
+        // Initialize particles
+        for (let i = 0; i < 45; i++) petalsList.push(new Petal());
+        for (let i = 0; i < 70; i++) raindropsList.push(new RainDrop());
+
+        // Particle Loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Periodically switch between raining and not raining (every 30 seconds)
+            rainTimer++;
+            if (rainTimer % 1800 === 0) { // Approx 30s at 60fps
+                isRainy = !isRainy;
+            }
+
+            // Draw rain if active
+            if (isRainy) {
+                raindropsList.forEach(drop => {
+                    drop.update();
+                    drop.draw();
+                });
+            }
+
+            // Draw petals (always active)
+            petalsList.forEach(petal => {
+                petal.update();
+                petal.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // WebSocket Integration
+        function connectWS() {
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+
+            ws.onopen = () => {
+                console.log("WebSocket connected to Fay App.");
+            };
+
+            ws.onmessage = (event) => {
+                const data = jsonParse(event.data);
+                if (!data) return;
+
+                if (data.type === 'message') {
+                    allMessages.push(data);
+                    appendMessage(data);
+                } else if (data.type === 'status') {
+                    updateStatus(data.agent, data.text);
+                } else if (data.type === 'settings') {
+                    document.getElementById('autopilot-toggle').checked = data.autopilot;
+                } else if (data.type === 'pending_approval') {
+                    showApprovalCard(data.id, data.command);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket closed. Reconnecting...");
+                setTimeout(connectWS, 2000);
+            };
+        }
+        connectWS();
+
+        function jsonParse(str) {
+            try { return JSON.parse(str); } catch (e) { return null; }
+        }
+
+        function switchChannel(channelName) {
+            activeChannel = channelName;
+            
+            // UI elements active toggling
+            document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(`chan-${channelName}`).classList.add('active');
+
+            document.getElementById('chat-title').innerText = channelName;
+            document.getElementById('chat-input').placeholder = `Message ${channelName}...`;
+
+            // Reload messages for the selected channel
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            
+            allMessages.filter(m => m.channel === activeChannel).forEach(appendMessage);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateStatus(agent, text) {
+            const dot = document.getElementById('status-dot');
+            const statusLabel = document.getElementById('status-text');
+
+            if (text) {
+                dot.classList.add('active');
+                statusLabel.innerText = `${agent}: ${text}`;
+            } else {
+                dot.classList.remove('active');
+                statusLabel.innerText = 'All agents idle';
+            }
+        }
+
+        function toggleAutopilot(checkbox) {
+            ws.send(JSON.stringify({
+                type: 'toggle_autopilot',
+                value: checkbox.checked
+            }));
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            ws.send(JSON.stringify({
+                type: 'user_message',
+                channel: activeChannel,
+                text: text
+            }));
+
+            input.value = '';
+        }
+
+        // Parse markdown formatting inside text
+        function formatText(text) {
+            // Replace block code
+            let formatted = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                return `<pre><code class="language-${lang}">${escapeHtml(code.trim())}</code></pre>`;
+            });
+
+            // Replace bold
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Replace inline code
+            formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+            
+            // Add Reviewer verdicts badges
+            if (formatted.includes("APPROVED")) {
+                formatted = formatted.replace("APPROVED", "<span class=\"verdict-approved\">APPROVED</span>");
+            }
+            if (formatted.includes("REJECTED")) {
+                formatted = formatted.replace("REJECTED", "<span class=\"verdict-rejected\">REJECTED</span>");
+            }
+
+            // Convert newlines to breaks (ignoring pre elements)
+            return formatted.replace(/\n/g, '<br>');
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function appendMessage(msg) {
+            // Check if this message belongs to the current channel
+            if (msg.channel !== activeChannel) return;
+
+            const container = document.getElementById('messages-container');
+            
+            const row = document.createElement('div');
+            row.classList.add('message-row');
+            
+            // Assign CSS class based on sender
+            const senderLower = msg.sender.toLowerCase();
+            if (senderLower === 'you') {
+                row.classList.add('self');
+            } else if (senderLower.includes('aoi')) {
+                row.classList.add('aoi');
+            } else if (senderLower.includes('ren')) {
+                row.classList.add('ren');
+            } else if (senderLower.includes('saya')) {
+                row.classList.add('saya');
+            } else if (senderLower.includes('kaito')) {
+                row.classList.add('kaito');
+            } else if (senderLower === 'system') {
+                row.classList.add('system');
+            }
+
+            const meta = document.createElement('div');
+            meta.classList.add('message-meta');
+            meta.innerText = msg.sender;
+
+            const bubble = document.createElement('div');
+            bubble.classList.add('message-bubble');
+            bubble.innerHTML = formatText(msg.text);
+
+            row.appendChild(meta);
+            row.appendChild(bubble);
+            container.appendChild(row);
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showApprovalCard(id, command) {
+            const container = document.getElementById('messages-container');
+
+            // Force view of qa-testing channel when approval prompts
+            if (activeChannel !== '#qa-testing') {
+                switchChannel('#qa-testing');
+            }
+
+            const card = document.createElement('div');
+            card.classList.add('approval-card');
+            card.id = `approval-${id}`;
+            card.innerHTML = `
+                <div class="approval-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--accent-pink)">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                    </svg>
+                    Awaiting Command approval
+                </div>
+                <div class="approval-command">${escapeHtml(command)}</div>
+                <div class="approval-buttons">
+                    <button class="btn btn-approve" onclick="submitApproval('${id}', true)">Approve & Run</button>
+                    <button class="btn btn-reject" onclick="submitApproval('${id}', false)">Reject</button>
+                </div>
+            `;
+            container.appendChild(card);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function submitApproval(id, approved) {
+            // Remove the card from UI
+            const card = document.getElementById(`approval-${id}`);
+            if (card) {
+                card.remove();
+            }
+
+            ws.send(JSON.stringify({
+                type: 'approval_response',
+                id: id,
+                approved: approved
+            }));
+        }
+    </script>
+</body>
+</html>
