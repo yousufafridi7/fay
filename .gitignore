@@ -1,0 +1,9 @@
+# Fay Workspace gitignore
+venv/
+__pycache__/
+*.pyc
+.env
+data/
+db.sqlite3
+logs/
+.tempmediaStorage/
