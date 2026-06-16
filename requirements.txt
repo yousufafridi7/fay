@@ -1,4 +1,7 @@
+# Core FastAPI dependencies for WebSocket synchronization
 fastapi
 uvicorn
+# Client requests & network testing
 httpx
+# Real-time message broadcasting
 websockets
