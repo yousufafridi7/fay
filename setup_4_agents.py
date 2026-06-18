@@ -80,6 +80,7 @@ def setup_agents():
     ]
     
     # 2. Insert the 4 agents
+    # Connects to the local Ollama instance running on port 11434
     for data in agents_data:
         agent = CrewMember(
             id=data["id"],
