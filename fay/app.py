@@ -23,6 +23,10 @@ autopilot_mode = True  # True = ON, False = OFF
 
 # Websocket manager to broadcast updates
 class ConnectionManager:
+    """
+    Manages active WebSocket connections for real-time channel updates
+    and handles agent status broadcasts across the Fay dashboard.
+    """
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
