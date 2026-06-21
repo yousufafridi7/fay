@@ -20,7 +20,7 @@ See Fay in action. Below is a visual demonstration of the real-time agent coordi
 ### 🎬 Interactive Run Demo
 The recording below demonstrates Fay's autopilot mode, showing the Sakura canvas weather effects, real-time logging, and agent coordination:
 
-![Fay Final Verification Recording](fay/static/assets/screenshot_general.png)
+![Fay Final Verification Recording](fay/static/assets/demo.webp)
 
 *(Note: Double-click `run_fay.bat` to launch the local dashboard and trigger the simulation).*
 
